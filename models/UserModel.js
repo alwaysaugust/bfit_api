@@ -14,7 +14,29 @@ var UserModelSchema = new Schema({
   family_name: String
 });
 UserModelSchema.methods.getSteps = function getSteps() {
-  console.log("... will get steps for " + this.accessToken);
+  const body = {
+    aggregateBy: [
+      {
+        dataTypeName: "com.google.step_count.delta",
+        dataSourceId:
+          "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
+      }
+    ],
+    bucketByTime: { durationMillis: 86400000 },
+    startTimeMillis: 1570129611000,
+    endTimeMillis: 1570216071000
+  };
+
+  fetch("www.googleapis.com/fitness/v1/users/me/dataset:aggregate", {
+    method: "post",
+    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json;encoding=utf-8",
+      Authorization: `Bearer ${this.accessToken}`
+    }
+  })
+    .then(res => res.json())
+    .then(json => console.log(json));
 };
 UserModelSchema.statics.findOrCreate = function findOrCreate(
   profile,
