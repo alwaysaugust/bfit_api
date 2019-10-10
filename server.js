@@ -7,11 +7,11 @@ const port = 5000;
 const passport = require("passport");
 //see https://github.com/jaredhanson/passport-google-oauth2
 var GoogleStrategy = require("passport-google-oauth20").Strategy;
-app.use(require("cookie-parser")());
+app.use(require("cookie-parser")("www.billi.cat"));
 app.use(require("body-parser").urlencoded({ extended: true }));
 app.use(
   require("express-session")({
-    secret: "keyboard cat",
+    secret: "billi.cat",
     resave: true,
     saveUninitialized: true
   })
@@ -67,7 +67,7 @@ app.get(
   passport.authenticate("google", {
     accessType: "offline",
     prompt: "consent",
-    session: false,
+    session: true,
     scope: ["profile", "https://www.googleapis.com/auth/fitness.activity.read"]
   })
 );
@@ -82,9 +82,22 @@ app.get(
     console.log(req.params);
     console.log(req.query);
     console.log("successful auth");
-    res.redirect("http://localhost:3000/");
+
+    res.redirect("http://localhost:5000/login");
   }
 );
+
+app.get("/login", (req, res) => {
+  console.log(req.user.googleId);
+  if (req.user) {
+    res.cookie("api_session", req.user.googleId, {
+      expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+    });
+    res.redirect(302, "http://localhost:3000/");
+  } else {
+    res.redirect("http://localhost:3000/login");
+  }
+});
 
 app.get("/", (req, res) => res.send({ data: "api ok" }));
 
@@ -112,7 +125,7 @@ app.get("/steps", async (req, res) => {
 
 app.get("/logout", function(req, res) {
   req.logout();
-  res.redirect("/");
+  res.redirect("http://localhost:3000/login");
 });
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));
