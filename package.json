@@ -5,6 +5,8 @@
   "dependencies": {
     "body-parser": "^1.19.0",
     "cookie-parser": "^1.4.4",
+    "cookie-session": "^1.3.3",
+    "cors": "^2.8.5",
     "express": "4.17.1",
     "express-session": "^1.16.2",
     "mongoose": "^5.7.3",
@@ -14,6 +16,6 @@
   },
   "scripts": {
     "start": "node server.js",
-    "start_mongo": "~/mongodb/bin/mongod --dbpath=/data/db"
+    "start_mongo": "~/mongodb/bin/mongod --dbpath=/Users/ollie/data/bfit_db"
   }
 }

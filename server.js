@@ -11,22 +11,31 @@ app.use(require("cookie-parser")("www.billi.cat"));
 app.use(require("body-parser").urlencoded({ extended: true }));
 app.use(
   require("express-session")({
-    secret: "billi.cat",
+    secret: "www.billi.cat",
     resave: true,
     saveUninitialized: true
   })
 );
+const cookieSession = require("cookie-session");
+
+// cookieSession config
+// app.use(
+//   cookieSession({
+//     maxAge: 24 * 60 * 60 * 1000, // One day in milliseconds
+//     keys: ["www.billi.cat"]
+//   })
+// );
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(function(req, res, next) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, OPTIONS, PUT, PATCH, DELETE"
   );
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "X-Requested-With,content-type"
+    "Content-Type, Authorization, Content-Length, X-Requested-With"
   );
   res.setHeader("Access-Control-Allow-Credentials", true);
   next();
@@ -88,14 +97,18 @@ app.get(
 );
 
 app.get("/login", (req, res) => {
-  console.log(req.user.googleId);
+  console.log("/login");
+  console.log(req.user);
   if (req.user) {
     res.cookie("api_session", req.user.googleId, {
       expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
     });
+    res.cookie("user", JSON.stringify(req.user), {
+      expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+    });
     res.redirect(302, "http://localhost:3000/");
   } else {
-    res.redirect("http://localhost:3000/login");
+    res.redirect(302, "http://localhost:3000/login");
   }
 });
 
@@ -109,9 +122,22 @@ app.get(
     scope: ["profile", "https://www.googleapis.com/auth/fitness.activity.read"]
   }),
   function(req, res) {
-    res.json(req.user);
+    res.json({ data: req.user });
   }
 );
+
+app.get("/user", async (req, res) => {
+  console.log("get user");
+  console.log(req.params);
+  console.log(req.query);
+  console.log(req.user);
+  console.log(req.session);
+  if (!req.user) {
+    res.send({ error: { code: 0, message: "User needs to login/register" } });
+  } else {
+    res.send({ data: req.user });
+  }
+});
 
 app.get("/steps", async (req, res) => {
   //load steps

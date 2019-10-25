@@ -11,7 +11,8 @@ var UserModelSchema = new Schema({
   picture: String,
   displayName: String,
   given_name: String,
-  family_name: String
+  family_name: String,
+  roleType: Number
 });
 UserModelSchema.methods.getSteps = function getSteps() {
   const body = {
@@ -57,8 +58,28 @@ UserModelSchema.statics.findOrCreate = function findOrCreate(
   console.log("findOrCreate");
   this.findOne({ googleId: profile.id }, function(err, result) {
     console.log("found:" + result);
-    result.accessToken = accessToken; //refresh accessToken
-    userObj.save(cb);
+    if (result) {
+      // old
+      result.accessToken = accessToken; //refresh accessToken
+      result.save(cb);
+    } else {
+      // new
+      userObj.save(cb);
+    }
+  });
+};
+
+UserModelSchema.statics.findUser = function findOrCreate(profile, cb) {
+  console.log("findOne: " + JSON.stringify(profile));
+  let searchId;
+  if (profile.id) {
+    searchId = profile.id;
+  } else {
+    searchId = profile["googleId"];
+  }
+  this.findOne({ googleId: searchId }, function(err, result) {
+    console.log("found:" + result);
+    cb(result);
   });
 };
 
