@@ -1,5 +1,5 @@
 const PORT = process.env.PORT || 5000;
-const ADDRESS = process.env.ADDRESS || "http://localhost";
+const PUBLIC_ADDRESS = process.env.PUBLIC_ADDRESS || "http://localhost";
 const FRONTEND = process.env.FRONTEND || "http://localhost:3000";
 // Required dependencies
 const express = require("express");
@@ -44,7 +44,7 @@ passport.use(
       clientID:
         "658254840670-23f7m3u1hpo8popp3ovsscu3r8qipap2.apps.googleusercontent.com",
       clientSecret: "BcbAks57gpAYRaLQaXU_6Qk9",
-      callbackURL: `${ADDRESS}:${PORT}/auth/google/callback`
+      callbackURL: `${PUBLIC_ADDRESS}:${PORT}/auth/google/callback`
     },
     (accessToken, refreshToken, profile, cb) => {
       console.log({ accessToken, refreshToken });
