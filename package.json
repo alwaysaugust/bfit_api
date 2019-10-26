@@ -9,13 +9,16 @@
     "cors": "^2.8.5",
     "express": "4.17.1",
     "express-session": "^1.16.2",
+    "moment": "^2.24.0",
     "mongoose": "^5.7.3",
     "node-fetch": "^2.6.0",
     "passport": "^0.4.0",
     "passport-google-oauth20": "^2.0.0"
   },
   "scripts": {
-    "start": "node server.js",
-    "start_mongo": "~/mongodb/bin/mongod --dbpath=/Users/ollie/data/bfit_db"
+    "start": "node serverTwo.js",
+    "start_prod": "PORT=5500 FRONTEND=http://bfit.getdispatch.co PUBLIC_ADDRESS=http://bfit.getdispatch.co/api npm start",
+    "start_mongo": "~/mongodb/bin/mongod --dbpath=/Users/ollie/data/bfit_db",
+    "clear_mongo": "node ClearDatabaseScript.js"
   }
 }

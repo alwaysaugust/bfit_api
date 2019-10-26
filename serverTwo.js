@@ -14,17 +14,17 @@ const UserModel = require("./models/UserModel");
 //parsing
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-//cors
-app.use("*", function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", FRONTEND);
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  res.header("Access-Control-Allow-Credentials", true);
-  next();
-});
+// //cors
+// app.use("*", function(req, res, next) {
+//   res.header("Access-Control-Allow-Origin", FRONTEND);
+//   res.header("Access-Control-Allow-Headers", "X-Requested-With");
+//   res.header("Access-Control-Allow-Headers", "Content-Type");
+//   res.header("Access-Control-Allow-Credentials", true);
+//   next();
+// });
 
-//enable pre-flight
-app.options("*", cors({ credentials: true, origin: FRONTEND }));
+// //enable pre-flight
+// app.options("*", cors({ credentials: true, origin: FRONTEND }));
 
 // cookieSession config
 app.use(
@@ -36,6 +36,8 @@ app.use(
 
 app.use(passport.initialize()); // Used to initialize passport
 app.use(passport.session()); // Used to persist login sessions
+
+app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 
 // Strategy config
 passport.use(
@@ -81,7 +83,7 @@ app.get("/", (req, res) => res.send({ data: "api ok" }));
 app.get(
   "/auth/google",
   passport.authenticate("google", {
-    scope: ["profile"] // Used to specify the required data
+    scope: ["profile", "https://www.googleapis.com/auth/fitness.activity.read"] // Used to specify the required data
   })
 );
 
@@ -116,6 +118,25 @@ app.get("/user", isUserAuthenticated, async (req, res) => {
   } else {
     UserModel.findUser(req.user, user => {
       res.send({ data: user });
+    });
+  }
+});
+
+app.get("/getSteps", isUserAuthenticated, async (req, res) => {
+  console.log("get steps");
+  if (!req.user) {
+    res.redirect(`${FRONTEND}/login`);
+  } else {
+    UserModel.findUser(req.user, user => {
+      user.getSteps(
+        steps => {
+          res.send({ data: steps });
+        },
+        error => {
+          console.log(error);
+          res.send({ error: error });
+        }
+      );
     });
   }
 });
