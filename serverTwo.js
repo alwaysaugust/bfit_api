@@ -99,11 +99,15 @@ app.get(
 app.post("/setRole", isUserAuthenticated, (req, res) => {
   console.log("/setRole");
   console.log(req.body.roleType);
-  UserModel.findUser(req.user, user => {
-    user.roleType = req.body.roleType;
-    user.save((err, savedUser) => {
-      res.send({ data: savedUser });
-    });
+  UserModel.findUser(req.user, (error, user) => {
+    if (error) {
+      res.send({ error: error });
+    } else {
+      user.roleType = req.body.roleType;
+      user.save((err, savedUser) => {
+        res.send({ data: savedUser });
+      });
+    }
   });
 });
 
