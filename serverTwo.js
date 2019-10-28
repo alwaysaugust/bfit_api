@@ -7,10 +7,12 @@ const app = express();
 var bodyParser = require("body-parser");
 const passport = require("passport");
 const cors = require("cors");
+var mongoose = require("mongoose");
 const GoogleStrategy = require("passport-google-oauth20");
 const cookieSession = require("cookie-session");
 
 const UserModel = require("./models/UserModel");
+const RewardModel = require("./models/RewardModel");
 //parsing
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -58,7 +60,6 @@ passport.use(
 // Used to stuff a piece of information into a cookie
 passport.serializeUser((user, done) => {
   console.log("serizalizeUser:");
-  console.log(user);
   done(null, user);
 });
 
@@ -113,10 +114,6 @@ app.post("/setRole", isUserAuthenticated, (req, res) => {
 
 app.get("/user", isUserAuthenticated, async (req, res) => {
   console.log("get user");
-  console.log(req.params);
-  console.log(req.query);
-  console.log(req.user);
-  console.log(req.session);
   if (!req.user) {
     res.redirect(`${FRONTEND}/login`);
   } else {
@@ -164,6 +161,56 @@ app.get("/convertToPoints", isUserAuthenticated, async (req, res) => {
   }
 });
 
+app.get("/getRewards", isUserAuthenticated, (req, res) => {
+  console.log("/getRewards");
+  let filter = {};
+  console.log(req.query);
+  if (req.query.vendorId) {
+    filter = { creator: new mongoose.Types.ObjectId(req.query.vendorId) };
+  }
+  RewardModel.find(filter, (error, rewards) => {
+    if (error) {
+      res.send({ error: error });
+    } else {
+      res.send({ data: rewards });
+    }
+  });
+});
+
+app.post("/createReward", isUserAuthenticated, (req, res) => {
+  console.log("/createReward");
+  const { reward } = req.body;
+
+  console.log(reward);
+  if (!reward) {
+    res.send({ error: { message: "missing reward form data" } });
+  } else if (req.user.roleType !== 1) {
+    res.send({ error: { message: "user must be admin" } });
+  } else {
+    UserModel.findUser(req.user, (error, user) => {
+      if (error) {
+        res.send({ error: error });
+      } else {
+        var rewardModel = new RewardModel({
+          cost: reward.cost,
+          expirationDate: reward.expirationDate,
+          title: reward.title,
+          description: reward.description,
+          image: null,
+          creator: user
+        });
+        rewardModel.save((error, model) => {
+          if (error) {
+            res.send({ error: error });
+          } else {
+            res.send({ data: model });
+          }
+        });
+      }
+    });
+  }
+});
+
 // Logout route
 app.get("/logout", (req, res) => {
   req.logout();
@@ -174,17 +221,17 @@ app.listen(PORT, () => {
   console.log("BFIT Server Started on port:" + PORT);
 });
 
-const test = () => {
-  UserModel.findUser({ id: "102615264871303617168" }, (error, user) => {
-    console.log(user);
-    console.log(error);
-    console.log(user.steps.length);
-    console.log(user.rewards.length);
-    user.getSteps((error, user) => {
-      console.log("saved steps");
-      console.log(error);
-      console.log(user);
-    });
-  });
-};
-test();
+// const test = () => {
+//   UserModel.findUser({ id: "102615264871303617168" }, (error, user) => {
+//     console.log(user);
+//     console.log(error);
+//     console.log(user.steps.length);
+//     console.log(user.rewards.length);
+//     user.getSteps((error, user) => {
+//       console.log("saved steps");
+//       console.log(error);
+//       console.log(user);
+//     });
+//   });
+// };
+// test();

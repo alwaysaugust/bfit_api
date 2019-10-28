@@ -89,7 +89,7 @@ UserModelSchema.statics.findOrCreate = function findOrCreate(
   refreshToken,
   cb
 ) {
-  console.log(profile);
+  //console.log(profile);
   var userObj = new this({
     accessToken,
     refreshToken,
@@ -101,7 +101,7 @@ UserModelSchema.statics.findOrCreate = function findOrCreate(
   });
   console.log("findOrCreate");
   this.findOne({ googleId: profile.id }, function(err, result) {
-    console.log("found:" + result);
+    //console.log("found:" + result);
     if (result) {
       // old
       result.accessToken = accessToken; //refresh accessToken
@@ -122,7 +122,7 @@ UserModelSchema.statics.findUser = function findOrCreate(profile, cb) {
     searchId = profile["googleId"];
   }
   this.findOne({ googleId: searchId }, function(err, result) {
-    console.log("found:" + result);
+    //console.log("found:" + result);
     result.getSteps(cb);
     //cb(result);
   });
