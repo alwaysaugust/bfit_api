@@ -6,6 +6,25 @@ mongoose.connect("mongodb://localhost/test_loyalty_token_database");
 // Define schema
 var Schema = mongoose.Schema;
 
+var DayStepsPoints = new Schema({
+  day: Number, //unix timestamp as of midnight of that day
+  steps: Number,
+  points: Number
+});
+
+var UserRewardDedemption = new Schema({
+  rewardId: Schema.Types.ObjectId,
+  timeStamp: Number //unix timestamp
+});
+
+var VendorReward = new Schema({
+  cost: Number,
+  expirationDate: Number, //unix timestamp
+  title: String,
+  description: String,
+  image: Buffer
+});
+
 var UserModelSchema = new Schema({
   accessToken: String,
   refreshToken: String,
@@ -14,28 +33,17 @@ var UserModelSchema = new Schema({
   displayName: String,
   given_name: String,
   family_name: String,
-  roleType: Number
+  roleType: Number, //0 user, 1 vendor
+  steps: [DayStepsPoints],
+  redemptions: [UserRewardDedemption],
+  rewards: [VendorReward] //empty if not vendor
 });
-UserModelSchema.methods.getSteps = function getSteps(cb, err) {
+UserModelSchema.methods.getSteps = function getSteps(cb) {
   const start = moment()
     .startOf("day")
     .unix();
-  console.log(start);
-  //moment().diff(moment())
   const startTime = start * 1000;
   const endTime = moment().unix() * 1000;
-  const body = {
-    // aggregateBy: [
-    //   {
-    //     dataTypeName: "com.google.step_count.delta",
-    //     dataSourceId:
-    //       "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps"
-    //   }
-    // ],
-    // bucketByTime: { durationMillis: 86400000 },
-    // startTimeMillis: start * 1000,
-    // endTimeMillis: moment().unix() * 1000
-  };
 
   fetch(
     "https://www.googleapis.com/fitness/v1/users/me/dataSources/derived:com.google.step_count.delta:com.google.android.gms:estimated_steps/datasets/" +
@@ -52,8 +60,28 @@ UserModelSchema.methods.getSteps = function getSteps(cb, err) {
     }
   )
     .then(res => res.json())
-    .then(cb)
-    .catch(err);
+    .then(jsonData => {
+      let totalSteps = 0;
+      if (jsonData.error) {
+        cb(jsonData.error, null);
+        return;
+      }
+      jsonData.point.forEach(point => {
+        totalSteps += point.value[0].intVal;
+      });
+      if (
+        this.steps.length > 0 &&
+        this.steps[this.steps.length - 1].day === start
+      ) {
+        this.steps[this.steps.length - 1].steps = totalSteps;
+      } else {
+        this.steps.push({ day: start, steps: totalSteps, points: 0 }); //todo find old points
+      }
+      console.log("saving new steps");
+      this.save(cb);
+      //cb(totalSteps);
+    })
+    .catch(error => cb(error, null));
 };
 UserModelSchema.statics.findOrCreate = function findOrCreate(
   profile,
@@ -95,7 +123,8 @@ UserModelSchema.statics.findUser = function findOrCreate(profile, cb) {
   }
   this.findOne({ googleId: searchId }, function(err, result) {
     console.log("found:" + result);
-    cb(result);
+    result.getSteps(cb);
+    //cb(result);
   });
 };
 

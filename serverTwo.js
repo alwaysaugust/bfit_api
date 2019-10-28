@@ -116,8 +116,12 @@ app.get("/user", isUserAuthenticated, async (req, res) => {
   if (!req.user) {
     res.redirect(`${FRONTEND}/login`);
   } else {
-    UserModel.findUser(req.user, user => {
-      res.send({ data: user });
+    UserModel.findUser(req.user, (error, user) => {
+      if (error) {
+        res.send({ error: error });
+      } else {
+        res.send({ data: user });
+      }
     });
   }
 });
@@ -127,16 +131,31 @@ app.get("/getSteps", isUserAuthenticated, async (req, res) => {
   if (!req.user) {
     res.redirect(`${FRONTEND}/login`);
   } else {
-    UserModel.findUser(req.user, user => {
-      user.getSteps(
-        steps => {
-          res.send({ data: steps });
-        },
-        error => {
-          console.log(error);
-          res.send({ error: error });
-        }
-      );
+    UserModel.findUser(req.user, (error, user) => {
+      if (error) {
+        res.send({ error: error });
+      } else {
+        res.send({ data: user });
+      }
+    });
+  }
+});
+
+app.get("/convertToPoints", isUserAuthenticated, async (req, res) => {
+  console.log("get steps");
+  if (!req.user) {
+    res.redirect(`${FRONTEND}/login`);
+  } else {
+    UserModel.findUser(req.user, (error, user) => {
+      if (error) {
+        res.send({ error: error });
+      } else {
+        let stepsData = user.steps[user.steps.length - 1];
+        stepsData.points = stepsData.steps;
+        user.save((err, savedUser) => {
+          res.send({ data: savedUser });
+        });
+      }
     });
   }
 });
@@ -150,3 +169,18 @@ app.get("/logout", (req, res) => {
 app.listen(PORT, () => {
   console.log("BFIT Server Started on port:" + PORT);
 });
+
+const test = () => {
+  UserModel.findUser({ id: "102615264871303617168" }, (error, user) => {
+    console.log(user);
+    console.log(error);
+    console.log(user.steps.length);
+    console.log(user.rewards.length);
+    user.getSteps((error, user) => {
+      console.log("saved steps");
+      console.log(error);
+      console.log(user);
+    });
+  });
+};
+test();
