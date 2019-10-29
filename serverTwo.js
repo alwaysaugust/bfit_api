@@ -3,9 +3,13 @@ const PUBLIC_ADDRESS = process.env.PUBLIC_ADDRESS || "http://localhost:5000";
 const FRONTEND = process.env.FRONTEND || "http://localhost:3000";
 // Required dependencies
 const express = require("express");
+var moment = require("moment");
 const app = express();
 var bodyParser = require("body-parser");
 const passport = require("passport");
+var fs = require("fs");
+var path = require("path");
+var multer = require("multer");
 const cors = require("cors");
 var mongoose = require("mongoose");
 const GoogleStrategy = require("passport-google-oauth20");
@@ -13,20 +17,26 @@ const cookieSession = require("cookie-session");
 
 const UserModel = require("./models/UserModel");
 const RewardModel = require("./models/RewardModel");
+
 //parsing
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-// //cors
-// app.use("*", function(req, res, next) {
-//   res.header("Access-Control-Allow-Origin", FRONTEND);
-//   res.header("Access-Control-Allow-Headers", "X-Requested-With");
-//   res.header("Access-Control-Allow-Headers", "Content-Type");
-//   res.header("Access-Control-Allow-Credentials", true);
-//   next();
-// });
 
-// //enable pre-flight
-// app.options("*", cors({ credentials: true, origin: FRONTEND }));
+//images
+app.use(express.static(path.join(__dirname, "uploads")));
+var storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename: function(req, file, cb) {
+    const timeStamp = moment().unix();
+    cb(null, timeStamp + "_" + file.originalname);
+  }
+});
+
+var upload = multer({
+  storage: storage
+});
 
 // cookieSession config
 app.use(
@@ -127,21 +137,6 @@ app.get("/user", isUserAuthenticated, async (req, res) => {
   }
 });
 
-app.get("/getSteps", isUserAuthenticated, async (req, res) => {
-  console.log("get steps");
-  if (!req.user) {
-    res.redirect(`${FRONTEND}/login`);
-  } else {
-    UserModel.findUser(req.user, (error, user) => {
-      if (error) {
-        res.send({ error: error });
-      } else {
-        res.send({ data: user });
-      }
-    });
-  }
-});
-
 app.get("/convertToPoints", isUserAuthenticated, async (req, res) => {
   console.log("get steps");
   if (!req.user) {
@@ -176,12 +171,9 @@ app.get("/getRewards", isUserAuthenticated, (req, res) => {
     }
   });
 });
-
 app.post("/createReward", isUserAuthenticated, (req, res) => {
   console.log("/createReward");
   const { reward } = req.body;
-
-  console.log(reward);
   if (!reward) {
     res.send({ error: { message: "missing reward form data" } });
   } else if (req.user.roleType !== 1) {
@@ -196,8 +188,9 @@ app.post("/createReward", isUserAuthenticated, (req, res) => {
           expirationDate: reward.expirationDate,
           title: reward.title,
           description: reward.description,
-          image: null,
-          creator: user
+          image: null, // set seperately
+          creator: user,
+          creatorLogo: user.picture
         });
         rewardModel.save((error, model) => {
           if (error) {
@@ -206,6 +199,50 @@ app.post("/createReward", isUserAuthenticated, (req, res) => {
             res.send({ data: model });
           }
         });
+      }
+    });
+  }
+});
+app.post("/setRewardImage/:id", upload.any(), (req, res) => {
+  console.log("/setRewardImage");
+
+  const { id } = req.params;
+  console.log(req.params.id);
+  if (!id) {
+    res.send({ error: { message: "missing reward id data" } });
+  } else if (req.user.roleType !== 1) {
+    res.send({ error: { message: "user must be admin" } });
+  } else {
+    RewardModel.findById(id, (error, reward) => {
+      if (error) {
+        res.send({ error: error });
+      } else {
+        reward.image = req.files[0].filename;
+        reward.save((error, reward) => {
+          if (error) {
+            res.send({ error: error });
+          } else {
+            res.send({ data: reward });
+          }
+        });
+      }
+    });
+  }
+});
+
+app.get("/getReward/:id", (req, res) => {
+  console.log("/getReward");
+
+  const { id } = req.params;
+  console.log(req.params.id);
+  if (!id) {
+    res.send({ error: { message: "missing reward id data" } });
+  } else {
+    RewardModel.findById(id, (error, reward) => {
+      if (error) {
+        res.send({ error: error });
+      } else {
+        res.send({ data: reward });
       }
     });
   }
