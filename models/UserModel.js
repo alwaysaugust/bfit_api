@@ -3,6 +3,8 @@ var mongoose = require("mongoose");
 var moment = require("moment");
 var fetch = require("node-fetch");
 mongoose.connect("mongodb://localhost/test_loyalty_token_database");
+
+const RewardModel = require("./RewardModel");
 // Define schema
 var Schema = mongoose.Schema;
 
@@ -38,6 +40,34 @@ var UserModelSchema = new Schema({
   redemptions: [UserRewardDedemption],
   rewards: [VendorReward] //empty if not vendor
 });
+
+UserModelSchema.methods.redeem = function redeem(rewardId, cb) {
+  RewardModel.findById(rewardId, (error, reward) => {
+    if (error) {
+      cb(error);
+    } else {
+      console.log(rewardId);
+      console.log(reward);
+      let pointsRequired = reward.cost;
+      let total = 0;
+      this.steps.forEach(stepData => {
+        total += stepData.points;
+      });
+
+      console.log("total:" + total);
+      console.log("points:" + pointsRequired);
+      if (total > pointsRequired) {
+        this.redemptions.push({
+          rewardId: rewardId,
+          timeStamp: moment().unix()
+        });
+        this.save(cb);
+      } else {
+        cb(new Error("not enough points to redeem"));
+      }
+    }
+  });
+};
 UserModelSchema.methods.getSteps = function getSteps(cb) {
   const start = moment()
     .startOf("day")
@@ -122,9 +152,7 @@ UserModelSchema.statics.findUser = function findOrCreate(profile, cb) {
     searchId = profile["googleId"];
   }
   this.findOne({ googleId: searchId }, function(err, result) {
-    //console.log("found:" + result);
     result.getSteps(cb);
-    //cb(result);
   });
 };
 

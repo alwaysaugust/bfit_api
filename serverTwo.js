@@ -121,7 +121,6 @@ app.post("/setRole", isUserAuthenticated, (req, res) => {
     }
   });
 });
-
 app.get("/user", isUserAuthenticated, async (req, res) => {
   console.log("get user");
   if (!req.user) {
@@ -131,12 +130,38 @@ app.get("/user", isUserAuthenticated, async (req, res) => {
       if (error) {
         res.send({ error: error });
       } else {
-        res.send({ data: user });
+        //iflate redemption data
+        if (user.redemptions.length > 0) {
+          let inflatedRedemptions = [];
+          user.redemptions.forEach((red, index) => {
+            const userObject = user.toObject();
+            RewardModel.findById(red.rewardId, (err, rewardObject) => {
+              console.log("..");
+
+              inflatedRedemptions[index] = {
+                timeStamp: red.timeStamp,
+                cost: rewardObject.cost,
+                image: rewardObject.image,
+                creatorLogo: rewardObject.creatorLogo,
+                rewardId: red.rewardId
+              }; //todo add more vendor data
+              if (index === user.redemptions.length - 1) {
+                console.log(inflatedRedemptions);
+                userObject.redemptions = inflatedRedemptions;
+                console.log("sending inflated data");
+                console.log(userObject);
+
+                res.send({ data: userObject });
+              }
+            });
+          });
+        } else {
+          res.send({ data: user });
+        }
       }
     });
   }
 });
-
 app.get("/convertToPoints", isUserAuthenticated, async (req, res) => {
   console.log("get steps");
   if (!req.user) {
@@ -155,7 +180,6 @@ app.get("/convertToPoints", isUserAuthenticated, async (req, res) => {
     });
   }
 });
-
 app.get("/getRewards", isUserAuthenticated, (req, res) => {
   console.log("/getRewards");
   let filter = {};
@@ -171,7 +195,7 @@ app.get("/getRewards", isUserAuthenticated, (req, res) => {
     }
   });
 });
-app.post("/createReward", isUserAuthenticated, (req, res) => {
+app.post("/createReward/:id*?", isUserAuthenticated, (req, res) => {
   console.log("/createReward");
   const { reward } = req.body;
   if (!reward) {
@@ -183,22 +207,47 @@ app.post("/createReward", isUserAuthenticated, (req, res) => {
       if (error) {
         res.send({ error: error });
       } else {
-        var rewardModel = new RewardModel({
-          cost: reward.cost,
-          expirationDate: reward.expirationDate,
-          title: reward.title,
-          description: reward.description,
-          image: null, // set seperately
-          creator: user,
-          creatorLogo: user.picture
-        });
-        rewardModel.save((error, model) => {
-          if (error) {
-            res.send({ error: error });
-          } else {
-            res.send({ data: model });
-          }
-        });
+        const { id } = req.params;
+        if (!id) {
+          let rewardModel = new RewardModel({
+            cost: reward.cost,
+            expirationDate: reward.expirationDate,
+            title: reward.title,
+            description: reward.description,
+            image: null, // set seperately
+            creator: user,
+            creatorLogo: user.picture
+          });
+          rewardModel.save((error, model) => {
+            if (error) {
+              res.send({ error: error });
+            } else {
+              res.send({ data: model });
+            }
+          });
+        } else {
+          console.log("update id: " + id);
+          RewardModel.findById(id, (error, oldReward) => {
+            console.log(oldReward);
+            if (error) {
+              res.send({ error: error });
+            } else {
+              oldReward.cost = reward.cost;
+              oldReward.expirationDate = reward.expirationDate;
+              oldReward.title = reward.title;
+              oldReward.description = reward.description;
+              oldReward.creator = user;
+              oldReward.creatorLogo = user.picture;
+              oldReward.save((error, model) => {
+                if (error) {
+                  res.send({ error: error });
+                } else {
+                  res.send({ data: model });
+                }
+              });
+            }
+          });
+        }
       }
     });
   }
@@ -247,7 +296,28 @@ app.get("/getReward/:id", (req, res) => {
     });
   }
 });
-
+app.post("/redeemReward/:id", isUserAuthenticated, (req, res) => {
+  console.log("/redeemReward");
+  const { id } = req.params;
+  console.log(req.params.id);
+  if (!id) {
+    res.send({ error: { message: "missing reward id data" } });
+  } else {
+    UserModel.findUser(req.user, (error, user) => {
+      if (error) {
+        res.send({ error: eror });
+      } else {
+        user.redeem(id, (error, user) => {
+          if (error) {
+            res.send({ error: error });
+          } else {
+            res.send({ data: user });
+          }
+        });
+      }
+    });
+  }
+});
 // Logout route
 app.get("/logout", (req, res) => {
   req.logout();
@@ -259,13 +329,11 @@ app.listen(PORT, () => {
 });
 
 // const test = () => {
-//   UserModel.findUser({ id: "102615264871303617168" }, (error, user) => {
+//   UserModel.findUser({ id: "115033584257748466608" }, (error, user) => {
 //     console.log(user);
 //     console.log(error);
-//     console.log(user.steps.length);
-//     console.log(user.rewards.length);
-//     user.getSteps((error, user) => {
-//       console.log("saved steps");
+//     user.redeem("5db98d1c2d279737ce316720", (error, user) => {
+//       console.log("tried to redeem");
 //       console.log(error);
 //       console.log(user);
 //     });
