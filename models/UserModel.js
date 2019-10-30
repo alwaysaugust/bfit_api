@@ -40,7 +40,35 @@ var UserModelSchema = new Schema({
   redemptions: [UserRewardDedemption],
   rewards: [VendorReward] //empty if not vendor
 });
-
+UserModelSchema.methods.inflateData = function inflateData(cb) {
+  //iflate redemption data
+  console.log("...inflating user data");
+  if (this.redemptions.length > 0) {
+    let inflatedRedemptions = [];
+    this.redemptions.forEach((red, index) => {
+      const userObject = this.toObject();
+      RewardModel.findById(red.rewardId, (err, rewardObject) => {
+        if (err) {
+          cb(err);
+        } else {
+          inflatedRedemptions[index] = {
+            timeStamp: red.timeStamp,
+            cost: rewardObject.cost,
+            image: rewardObject.image,
+            creatorLogo: rewardObject.creatorLogo,
+            rewardId: red.rewardId
+          }; //todo add more vendor data
+          if (index === this.redemptions.length - 1) {
+            userObject.redemptions = inflatedRedemptions;
+            cb(null, userObject);
+          }
+        }
+      });
+    });
+  } else {
+    cb(null, this.toObject());
+  }
+};
 UserModelSchema.methods.redeem = function redeem(rewardId, cb) {
   RewardModel.findById(rewardId, (error, reward) => {
     if (error) {

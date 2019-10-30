@@ -130,34 +130,13 @@ app.get("/user", isUserAuthenticated, async (req, res) => {
       if (error) {
         res.send({ error: error });
       } else {
-        //iflate redemption data
-        if (user.redemptions.length > 0) {
-          let inflatedRedemptions = [];
-          user.redemptions.forEach((red, index) => {
-            const userObject = user.toObject();
-            RewardModel.findById(red.rewardId, (err, rewardObject) => {
-              console.log("..");
-
-              inflatedRedemptions[index] = {
-                timeStamp: red.timeStamp,
-                cost: rewardObject.cost,
-                image: rewardObject.image,
-                creatorLogo: rewardObject.creatorLogo,
-                rewardId: red.rewardId
-              }; //todo add more vendor data
-              if (index === user.redemptions.length - 1) {
-                console.log(inflatedRedemptions);
-                userObject.redemptions = inflatedRedemptions;
-                console.log("sending inflated data");
-                console.log(userObject);
-
-                res.send({ data: userObject });
-              }
-            });
-          });
-        } else {
-          res.send({ data: user });
-        }
+        user.inflateData((error, inflatedUser) => {
+          if (error) {
+            res.send({ error: error });
+          } else {
+            res.send({ data: inflatedUser });
+          }
+        });
       }
     });
   }
@@ -311,7 +290,13 @@ app.post("/redeemReward/:id", isUserAuthenticated, (req, res) => {
           if (error) {
             res.send({ error: error });
           } else {
-            res.send({ data: user });
+            user.inflateData((error, inflatedUser) => {
+              if (error) {
+                res.send({ error: error });
+              } else {
+                res.send({ data: inflatedUser });
+              }
+            });
           }
         });
       }
