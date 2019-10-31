@@ -45,26 +45,46 @@ UserModelSchema.methods.inflateData = function inflateData(cb) {
   console.log("...inflating user data");
   if (this.redemptions.length > 0) {
     let inflatedRedemptions = [];
-    this.redemptions.forEach((red, index) => {
-      const userObject = this.toObject();
-      RewardModel.findById(red.rewardId, (err, rewardObject) => {
-        if (err) {
-          cb(err);
-        } else {
+    const userObject = this.toObject();
+    let redIds = this.redemptions.map(
+      red => new mongoose.Types.ObjectId(red.rewardId)
+    );
+    RewardModel.find({ _id: { $in: redIds } }, (err, models) => {
+      if (err) {
+        cb(err);
+      } else {
+        models.forEach((rewardObject, index) => {
           inflatedRedemptions[index] = {
-            timeStamp: red.timeStamp,
+            timeStamp: this.redemptions[index].timeStamp,
             cost: rewardObject.cost,
             image: rewardObject.image,
             creatorLogo: rewardObject.creatorLogo,
-            rewardId: red.rewardId
+            rewardId: this.redemptions[index].rewardId
           }; //todo add more vendor data
-          if (index === this.redemptions.length - 1) {
-            userObject.redemptions = inflatedRedemptions;
-            cb(null, userObject);
-          }
-        }
-      });
+        });
+        userObject.redemptions = inflatedRedemptions;
+        cb(null, userObject);
+      }
     });
+    // this.redemptions.forEach((red, index) => {
+    //   RewardModel.findById(red.rewardId, (err, rewardObject) => {
+    //     if (err) {
+    //       cb(err);
+    //     } else {
+    //       inflatedRedemptions[index] = {
+    //         timeStamp: red.timeStamp,
+    //         cost: rewardObject.cost,
+    //         image: rewardObject.image,
+    //         creatorLogo: rewardObject.creatorLogo,
+    //         rewardId: red.rewardId
+    //       }; //todo add more vendor data
+    //       if (index === this.redemptions.length - 1) {
+    //         userObject.redemptions = inflatedRedemptions;
+    //         cb(null, userObject);
+    //       }
+    //     }
+    //   });
+    // });
   } else {
     cb(null, this.toObject());
   }
