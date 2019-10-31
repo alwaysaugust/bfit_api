@@ -64,15 +64,18 @@ UserModelSchema.methods.inflateData = function inflateData(cb) {
                     console.log(el._id.equals(red.rewardId));
                     return el._id.equals(red.rewardId);
                   });
-                  console.log(rewardObject);
-                  vendorRedemptions.push({
-                    timeStamp: red.timeStamp,
-                    cost: rewardObject.cost,
-                    image: rewardObject.image,
-                    creatorLogo: rewardObject.creatorLogo,
-                    rewardId: red.rewardId,
-                    userName: user.displayName
-                  });
+                  if (!rewardObject) {
+                    console.err("rewardObject:" + rewardObject);
+                  } else {
+                    vendorRedemptions.push({
+                      timeStamp: red.timeStamp,
+                      cost: rewardObject.cost,
+                      image: rewardObject.image,
+                      creatorLogo: rewardObject.creatorLogo,
+                      rewardId: red.rewardId,
+                      userName: user.displayName
+                    });
+                  }
                 });
               });
               userObject.vendorRedemptions = vendorRedemptions;
