@@ -65,7 +65,7 @@ UserModelSchema.methods.inflateData = function inflateData(cb) {
                     return el._id.equals(red.rewardId);
                   });
                   if (!rewardObject) {
-                    console.err("rewardObject:" + rewardObject);
+                    console.log("rewardObject:" + rewardObject);
                   } else {
                     vendorRedemptions.push({
                       timeStamp: red.timeStamp,
