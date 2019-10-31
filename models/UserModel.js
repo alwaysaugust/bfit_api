@@ -43,50 +43,72 @@ var UserModelSchema = new Schema({
 UserModelSchema.methods.inflateData = function inflateData(cb) {
   //iflate redemption data
   console.log("...inflating user data");
-  if (this.redemptions.length > 0) {
-    let inflatedRedemptions = [];
-    const userObject = this.toObject();
-    let redIds = this.redemptions.map(
-      red => new mongoose.Types.ObjectId(red.rewardId)
-    );
-    RewardModel.find({ _id: { $in: redIds } }, (err, models) => {
-      if (err) {
-        cb(err);
+  if (this.roleType === 1) {
+    RewardModel.find({ creator: this._id }, (error, rewardsCreated) => {
+      if (error) {
+        cb(error);
       } else {
-        models.forEach((rewardObject, index) => {
-          inflatedRedemptions[index] = {
-            timeStamp: this.redemptions[index].timeStamp,
-            cost: rewardObject.cost,
-            image: rewardObject.image,
-            creatorLogo: rewardObject.creatorLogo,
-            rewardId: this.redemptions[index].rewardId
-          }; //todo add more vendor data
-        });
-        userObject.redemptions = inflatedRedemptions;
-        cb(null, userObject);
+        UserModel.find(
+          { "redemptions.rewardId": { $in: rewardsCreated } },
+          (error, usersRedeemed) => {
+            if (error) {
+              cb(error);
+            } else {
+              const userObject = this.toObject();
+              const vendorRedemptions = [];
+              usersRedeemed.forEach(user => {
+                user.redemptions.forEach(red => {
+                  let rewardObject = rewardsCreated.find(el => {
+                    console.log(el._id);
+                    console.log(red.rewardId);
+                    console.log(el._id.equals(red.rewardId));
+                    return el._id.equals(red.rewardId);
+                  });
+                  console.log(rewardObject);
+                  vendorRedemptions.push({
+                    timeStamp: red.timeStamp,
+                    cost: rewardObject.cost,
+                    image: rewardObject.image,
+                    creatorLogo: rewardObject.creatorLogo,
+                    rewardId: red.rewardId,
+                    userName: user.displayName
+                  });
+                });
+              });
+              userObject.vendorRedemptions = vendorRedemptions;
+              cb(null, userObject);
+            }
+          }
+        );
       }
     });
-    // this.redemptions.forEach((red, index) => {
-    //   RewardModel.findById(red.rewardId, (err, rewardObject) => {
-    //     if (err) {
-    //       cb(err);
-    //     } else {
-    //       inflatedRedemptions[index] = {
-    //         timeStamp: red.timeStamp,
-    //         cost: rewardObject.cost,
-    //         image: rewardObject.image,
-    //         creatorLogo: rewardObject.creatorLogo,
-    //         rewardId: red.rewardId
-    //       }; //todo add more vendor data
-    //       if (index === this.redemptions.length - 1) {
-    //         userObject.redemptions = inflatedRedemptions;
-    //         cb(null, userObject);
-    //       }
-    //     }
-    //   });
-    // });
   } else {
-    cb(null, this.toObject());
+    if (this.redemptions.length > 0) {
+      let inflatedRedemptions = [];
+      const userObject = this.toObject();
+      let redIds = this.redemptions.map(
+        red => new mongoose.Types.ObjectId(red.rewardId)
+      );
+      RewardModel.find({ _id: { $in: redIds } }, (err, models) => {
+        if (err) {
+          cb(err);
+        } else {
+          models.forEach((rewardObject, index) => {
+            inflatedRedemptions.push({
+              timeStamp: this.redemptions[index].timeStamp,
+              cost: rewardObject.cost,
+              image: rewardObject.image,
+              creatorLogo: rewardObject.creatorLogo,
+              rewardId: this.redemptions[index].rewardId
+            }); //todo add more vendor data
+          });
+          userObject.redemptions = inflatedRedemptions;
+          cb(null, userObject);
+        }
+      });
+    } else {
+      cb(null, this.toObject());
+    }
   }
 };
 UserModelSchema.methods.redeem = function redeem(rewardId, cb) {
@@ -105,6 +127,7 @@ UserModelSchema.methods.redeem = function redeem(rewardId, cb) {
       console.log("total:" + total);
       console.log("points:" + pointsRequired);
       if (total > pointsRequired) {
+        console.log("adding redemption");
         this.redemptions.push({
           rewardId: rewardId,
           timeStamp: moment().unix()
