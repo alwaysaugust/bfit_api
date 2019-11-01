@@ -125,7 +125,13 @@ app.post("/setRole", isUserAuthenticated, (req, res) => {
           if (err) {
             res.send({ error: err });
           } else {
-            res.send({ data: savedUser });
+            savedUser.inflateData((error, inflatedUser) => {
+              if (error) {
+                res.send({ error: error });
+              } else {
+                res.send({ data: inflatedUser });
+              }
+            });
           }
         });
       }
@@ -140,11 +146,17 @@ app.post("/setVendorImage", upload.any(), (req, res) => {
       res.send({ error: error });
     } else {
       vendor.vendorData.image = req.files[0].filename;
-      vendor.save((error, reward) => {
+      vendor.save((error, savedUser) => {
         if (error) {
           res.send({ error: error });
         } else {
-          res.send({ data: reward });
+          savedUser.inflateData((error, inflatedUser) => {
+            if (error) {
+              res.send({ error: error });
+            } else {
+              res.send({ data: inflatedUser });
+            }
+          });
         }
       });
     }
@@ -333,6 +345,17 @@ app.get("/logout", (req, res) => {
   res.redirect(`${FRONTEND}/login`);
 });
 
+app.get("/delete", (req, res) => {
+  let idRef = req.user._id;
+  req.logout();
+  UserModel.findById(idRef).deleteOne((error, model) => {
+    if (error) {
+      res.send({ error });
+    } else {
+      res.redirect(`${FRONTEND}/login`);
+    }
+  });
+});
 app.listen(PORT, () => {
   console.log("BFIT Server Started on port:" + PORT);
 });
