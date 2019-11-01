@@ -8,6 +8,18 @@ const RewardModel = require("./RewardModel");
 // Define schema
 var Schema = mongoose.Schema;
 
+var VendorData = new Schema({
+  name: String,
+  image: String, // path to servers /uploads folder
+  addressOne: String,
+  addressTwo: String,
+  addressCity: String,
+  addressProvince: String,
+  addressCountry: String,
+  addressPostalCode: String,
+  category: String
+});
+
 var DayStepsPoints = new Schema({
   day: Number, //unix timestamp as of midnight of that day
   steps: Number,
@@ -38,7 +50,8 @@ var UserModelSchema = new Schema({
   roleType: Number, //0 user, 1 vendor
   steps: [DayStepsPoints],
   redemptions: [UserRewardDedemption],
-  rewards: [VendorReward] //empty if not vendor
+  rewards: [VendorReward], //empty if not vendor
+  vendorData: VendorData //empty if not vendor
 });
 UserModelSchema.methods.inflateData = function inflateData(cb) {
   //iflate redemption data
@@ -86,13 +99,18 @@ UserModelSchema.methods.inflateData = function inflateData(cb) {
       }
     });
   } else {
+    //user
     if (this.redemptions.length > 0) {
       let inflatedRedemptions = [];
       const userObject = this.toObject();
-      let redIds = this.redemptions.map(
-        red => new mongoose.Types.ObjectId(red.rewardId)
-      );
-      RewardModel.find({ _id: { $in: redIds } }, (err, models) => {
+      let redIds = this.redemptions.map(red => {
+        //todo gett all models here synchonously
+        // let test = RewardModel.findById(red.rewardId).;
+        // console.log(test);
+        return new mongoose.Types.ObjectId(red.rewardId);
+      });
+
+      RewardModel.find({ _id: { $all: redIds } }, (err, models) => {
         if (err) {
           cb(err);
         } else {

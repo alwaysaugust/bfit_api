@@ -110,13 +110,42 @@ app.get(
 app.post("/setRole", isUserAuthenticated, (req, res) => {
   console.log("/setRole");
   console.log(req.body.roleType);
-  UserModel.findUser(req.user, (error, user) => {
+  console.log(req.body.vendorData);
+  const { roleType, vendorData } = req.body;
+  if (roleType === 1 && !vendorData) {
+    res.send({ error: "Missing vendor data" });
+  } else {
+    UserModel.findUser(req.user, (error, user) => {
+      if (error) {
+        res.send({ error: error });
+      } else {
+        user.roleType = roleType;
+        user.vendorData = vendorData;
+        user.save((err, savedUser) => {
+          if (err) {
+            res.send({ error: err });
+          } else {
+            res.send({ data: savedUser });
+          }
+        });
+      }
+    });
+  }
+});
+app.post("/setVendorImage", upload.any(), (req, res) => {
+  console.log("/setVendorImage");
+
+  UserModel.findUser(req.user, (error, vendor) => {
     if (error) {
       res.send({ error: error });
     } else {
-      user.roleType = req.body.roleType;
-      user.save((err, savedUser) => {
-        res.send({ data: savedUser });
+      vendor.vendorData.image = req.files[0].filename;
+      vendor.save((error, reward) => {
+        if (error) {
+          res.send({ error: error });
+        } else {
+          res.send({ data: reward });
+        }
       });
     }
   });
@@ -177,14 +206,15 @@ app.get("/getRewards", isUserAuthenticated, (req, res) => {
 app.post("/createReward/:id*?", isUserAuthenticated, (req, res) => {
   console.log("/createReward");
   const { reward } = req.body;
-  if (!reward) {
-    res.send({ error: { message: "missing reward form data" } });
-  } else if (req.user.roleType !== 1) {
-    res.send({ error: { message: "user must be admin" } });
-  } else {
-    UserModel.findUser(req.user, (error, user) => {
-      if (error) {
-        res.send({ error: error });
+
+  UserModel.findUser(req.user, (error, user) => {
+    if (error) {
+      res.send({ error: error });
+    } else {
+      if (!reward) {
+        res.send({ error: { message: "missing reward form data" } });
+      } else if (user.roleType !== 1) {
+        res.send({ error: { message: "user must be admin" } });
       } else {
         const { id } = req.params;
         if (!id) {
@@ -195,7 +225,7 @@ app.post("/createReward/:id*?", isUserAuthenticated, (req, res) => {
             description: reward.description,
             image: null, // set seperately
             creator: user,
-            creatorLogo: user.picture
+            creatorLogo: user.vendorData.image
           });
           rewardModel.save((error, model) => {
             if (error) {
@@ -216,7 +246,7 @@ app.post("/createReward/:id*?", isUserAuthenticated, (req, res) => {
               oldReward.title = reward.title;
               oldReward.description = reward.description;
               oldReward.creator = user;
-              oldReward.creatorLogo = user.picture;
+              oldReward.creatorLogo = user.vendorData.image;
               oldReward.save((error, model) => {
                 if (error) {
                   res.send({ error: error });
@@ -228,34 +258,28 @@ app.post("/createReward/:id*?", isUserAuthenticated, (req, res) => {
           });
         }
       }
-    });
-  }
+    }
+  });
 });
 app.post("/setRewardImage/:id", upload.any(), (req, res) => {
   console.log("/setRewardImage");
 
   const { id } = req.params;
-  console.log(req.params.id);
-  if (!id) {
-    res.send({ error: { message: "missing reward id data" } });
-  } else if (req.user.roleType !== 1) {
-    res.send({ error: { message: "user must be admin" } });
-  } else {
-    RewardModel.findById(id, (error, reward) => {
-      if (error) {
-        res.send({ error: error });
-      } else {
-        reward.image = req.files[0].filename;
-        reward.save((error, reward) => {
-          if (error) {
-            res.send({ error: error });
-          } else {
-            res.send({ data: reward });
-          }
-        });
-      }
-    });
-  }
+
+  RewardModel.findById(id, (error, reward) => {
+    if (error) {
+      res.send({ error: error });
+    } else {
+      reward.image = req.files[0].filename;
+      reward.save((error, reward) => {
+        if (error) {
+          res.send({ error: error });
+        } else {
+          res.send({ data: reward });
+        }
+      });
+    }
+  });
 });
 
 app.get("/getReward/:id", (req, res) => {
