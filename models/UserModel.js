@@ -103,17 +103,26 @@ UserModelSchema.methods.inflateData = function inflateData(cb) {
     if (this.redemptions.length > 0) {
       let inflatedRedemptions = [];
       const userObject = this.toObject();
+      const promises = [];
       let redIds = this.redemptions.map(red => {
         //todo gett all models here synchonously
         // let test = RewardModel.findById(red.rewardId).;
         // console.log(test);
+        promises.push(
+          new Promise((resolve, reject) => {
+            RewardModel.findById(red.rewardId, (err, model) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve(model);
+              }
+            });
+          })
+        );
         return new mongoose.Types.ObjectId(red.rewardId);
       });
-
-      RewardModel.find({ _id: { $all: redIds } }, (err, models) => {
-        if (err) {
-          cb(err);
-        } else {
+      Promise.all(promises)
+        .then(models => {
           models.forEach((rewardObject, index) => {
             inflatedRedemptions.push({
               timeStamp: this.redemptions[index].timeStamp,
@@ -125,8 +134,8 @@ UserModelSchema.methods.inflateData = function inflateData(cb) {
           });
           userObject.redemptions = inflatedRedemptions;
           cb(null, userObject);
-        }
-      });
+        })
+        .catch(cb);
     } else {
       cb(null, this.toObject());
     }
