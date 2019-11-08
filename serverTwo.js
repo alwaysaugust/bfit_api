@@ -17,7 +17,7 @@ const cookieSession = require("cookie-session");
 
 const UserModel = require("./models/UserModel");
 const RewardModel = require("./models/RewardModel");
-
+const { send } = require("./mailHelper");
 //parsing
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -165,9 +165,10 @@ app.post("/approveRejectVendor", isUserAuthenticated, (req, res) => {
           res.send({ error: error });
         } else {
           if (req.body.data.flag) {
+            send(user.email, "d-8636ec0293d4466eb004547063c4e9c6");
             user.vendorData.status = 1;
           } else {
-            //todo email rejection
+            send(user.email, "d-b6f3182a304e4e4191659dfab4ab6b00");
             user.vendorData.status = 2;
           }
           user.save((err, savedUser) => {
@@ -461,15 +462,16 @@ app.listen(PORT, () => {
   console.log("BFIT Server Started on port:" + PORT);
 });
 
-// const test = () => {
-//   UserModel.findUser({ id: "115033584257748466608" }, (error, user) => {
-//     console.log(user);
-//     console.log(error);
-//     user.redeem("5db98d1c2d279737ce316720", (error, user) => {
-//       console.log("tried to redeem");
-//       console.log(error);
-//       console.log(user);
-//     });
-//   });
-// };
-// test();
+const test = () => {
+  //send("oleksiy@alwaysaugust.co", "d-b6f3182a304e4e4191659dfab4ab6b00");
+  // UserModel.findUser({ id: "115033584257748466608" }, (error, user) => {
+  //   console.log(user);
+  //   console.log(error);
+  //   user.redeem("5db98d1c2d279737ce316720", (error, user) => {
+  //     console.log("tried to redeem");
+  //     console.log(error);
+  //     console.log(user);
+  //   });
+  // });
+};
+test();

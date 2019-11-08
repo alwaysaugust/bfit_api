@@ -59,7 +59,7 @@ var UserModelSchema = new Schema({
   vendorData: VendorData //empty if not vendor
 });
 UserModelSchema.methods.canCreate = function canCreate(cb) {
-  if (this.vendorData.status !== 0) {
+  if (this.vendorData.status !== 1) {
     cb("Vendor not approved to create rewards");
   } else {
     let filter = { creator: this._id };
