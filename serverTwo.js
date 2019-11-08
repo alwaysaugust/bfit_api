@@ -165,10 +165,10 @@ app.post("/approveRejectVendor", isUserAuthenticated, (req, res) => {
           res.send({ error: error });
         } else {
           if (req.body.data.flag) {
-            send(user.email, "d-8636ec0293d4466eb004547063c4e9c6");
+            //send(user.email, "d-8636ec0293d4466eb004547063c4e9c6");
             user.vendorData.status = 1;
           } else {
-            send(user.email, "d-b6f3182a304e4e4191659dfab4ab6b00");
+            //send(user.email, "d-b6f3182a304e4e4191659dfab4ab6b00");
             user.vendorData.status = 2;
           }
           user.save((err, savedUser) => {
