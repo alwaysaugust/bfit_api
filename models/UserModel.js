@@ -32,7 +32,8 @@ var DayStepsPoints = new Schema({
 
 var UserRewardDedemption = new Schema({
   rewardId: Schema.Types.ObjectId,
-  timeStamp: Number //unix timestamp
+  timeStamp: Number, //unix timestamp
+  cost: Number
 });
 
 var VendorReward = new Schema({
@@ -168,17 +169,24 @@ UserModelSchema.methods.redeem = function redeem(rewardId, cb) {
       console.log(reward);
       let pointsRequired = reward.cost;
       let total = 0;
+
+      let totalRedemptionPoints = 0;
+      this.redemptions.forEach(red => {
+        totalRedemptionPoints += red.cost;
+      });
+
       this.steps.forEach(stepData => {
         total += stepData.points;
       });
-
+      total -= totalRedemptionPoints;
       console.log("total:" + total);
       console.log("points:" + pointsRequired);
       if (total > pointsRequired) {
         console.log("adding redemption");
         this.redemptions.push({
           rewardId: rewardId,
-          timeStamp: moment().unix()
+          timeStamp: moment().unix(),
+          cost: pointsRequired
         });
         this.save(cb);
       } else {
@@ -218,6 +226,7 @@ UserModelSchema.methods.getSteps = function getSteps(cb) {
       jsonData.point.forEach(point => {
         totalSteps += point.value[0].intVal;
       });
+      //totalSteps = 1707;
       if (
         this.steps.length > 0 &&
         this.steps[this.steps.length - 1].day === start

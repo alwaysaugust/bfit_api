@@ -276,7 +276,7 @@ app.get("/convertToPoints", isUserAuthenticated, async (req, res) => {
       } else {
         const REDEMPTION_RATIO = 10;
         let stepsData = user.steps[user.steps.length - 1];
-        stepsData.points = Math.round(stepsData.steps / REDEMPTION_RATIO);
+        stepsData.points = Math.floor(stepsData.steps / REDEMPTION_RATIO);
         user.save((err, savedUser) => {
           res.send({ data: savedUser });
         });
