@@ -17,7 +17,11 @@ var VendorData = new Schema({
   addressProvince: String,
   addressCountry: String,
   addressPostalCode: String,
-  category: String
+  category: String,
+  about: String,
+  status: Number, // 0 pending, 1, approved, 2 rejected
+  rejectedReason: String,
+  isAdmin: Boolean
 });
 
 var DayStepsPoints = new Schema({
@@ -47,12 +51,29 @@ var UserModelSchema = new Schema({
   displayName: String,
   given_name: String,
   family_name: String,
+  email: String,
   roleType: Number, //0 user, 1 vendor
   steps: [DayStepsPoints],
   redemptions: [UserRewardDedemption],
   rewards: [VendorReward], //empty if not vendor
   vendorData: VendorData //empty if not vendor
 });
+UserModelSchema.methods.canCreate = function canCreate(cb) {
+  if (this.vendorData.status !== 0) {
+    cb("Vendor not approved to create rewards");
+  } else {
+    let filter = { creator: this._id };
+
+    RewardModel.find(filter, (error, rewards) => {
+      if (error) {
+        cb("Error fingind user", false);
+      } else {
+        let totalValid = rewards.filter(reward => !reward.isExpired()).length;
+        cb("Too many Rewards created", totalValid < 3);
+      }
+    });
+  }
+};
 UserModelSchema.methods.inflateData = function inflateData(cb) {
   //iflate redemption data
   console.log("...inflating user data");
@@ -105,9 +126,6 @@ UserModelSchema.methods.inflateData = function inflateData(cb) {
       const userObject = this.toObject();
       const promises = [];
       let redIds = this.redemptions.map(red => {
-        //todo gett all models here synchonously
-        // let test = RewardModel.findById(red.rewardId).;
-        // console.log(test);
         promises.push(
           new Promise((resolve, reject) => {
             RewardModel.findById(red.rewardId, (err, model) => {
@@ -164,7 +182,7 @@ UserModelSchema.methods.redeem = function redeem(rewardId, cb) {
         });
         this.save(cb);
       } else {
-        cb(new Error("not enough points to redeem"));
+        cb("Not enough points to redeem");
       }
     }
   });
@@ -218,7 +236,8 @@ UserModelSchema.statics.findOrCreate = function findOrCreate(
   profile,
   accessToken,
   refreshToken,
-  cb
+  cb,
+  roleType
 ) {
   //console.log(profile);
   var userObj = new this({
@@ -228,7 +247,9 @@ UserModelSchema.statics.findOrCreate = function findOrCreate(
     googleId: profile.id,
     picture: profile.photos[0].value,
     given_name: profile.name.givenName,
-    family_name: profile.name.familyName
+    family_name: profile.name.familyName,
+    email: profile.emails[0].value,
+    roleType: roleType
   });
   console.log("findOrCreate");
   this.findOne({ googleId: profile.id }, function(err, result) {
@@ -245,15 +266,21 @@ UserModelSchema.statics.findOrCreate = function findOrCreate(
 };
 
 UserModelSchema.statics.findUser = function findOrCreate(profile, cb) {
-  console.log("findOne: " + JSON.stringify(profile));
   let searchId;
   if (profile.id) {
     searchId = profile.id;
   } else {
     searchId = profile["googleId"];
   }
+  console.log("findOne: " + searchId);
   this.findOne({ googleId: searchId }, function(err, result) {
-    result.getSteps(cb);
+    if (result) {
+      console.log("found");
+      result.getSteps(cb);
+    } else {
+      console.log("not found");
+      cb("No user");
+    }
   });
 };
 

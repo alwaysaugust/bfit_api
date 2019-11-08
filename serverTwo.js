@@ -58,11 +58,15 @@ passport.use(
       clientID:
         "658254840670-23f7m3u1hpo8popp3ovsscu3r8qipap2.apps.googleusercontent.com",
       clientSecret: "BcbAks57gpAYRaLQaXU_6Qk9",
+      passReqToCallback: true,
       callbackURL: `${PUBLIC_ADDRESS}/auth/google/callback`
     },
-    (accessToken, refreshToken, profile, cb) => {
+    (req, accessToken, refreshToken, profile, cb) => {
+      const userType = req.session.userType;
+      console.log("user type: " + userType);
       console.log({ accessToken, refreshToken });
-      UserModel.findOrCreate(profile, accessToken, refreshToken, cb);
+      console.log(profile);
+      UserModel.findOrCreate(profile, accessToken, refreshToken, cb, userType);
     }
   )
 );
@@ -91,10 +95,21 @@ function isUserAuthenticated(req, res, next) {
 app.get("/", (req, res) => res.send({ data: "api ok" }));
 
 // passport.authenticate middleware is used here to authenticate the request
+app.get("/auth/google", (req, res, next) => {
+  console.log(req.query);
+  req.session.userType = req.query.userType;
+  next();
+});
+
 app.get(
   "/auth/google",
   passport.authenticate("google", {
-    scope: ["profile", "https://www.googleapis.com/auth/fitness.activity.read"] // Used to specify the required data
+    passReqToCallback: true,
+    scope: [
+      "profile",
+      "email",
+      "https://www.googleapis.com/auth/fitness.activity.read"
+    ] // Used to specify the required data
   })
 );
 
@@ -103,10 +118,76 @@ app.get(
   "/auth/google/callback",
   passport.authenticate("google"),
   (req, res) => {
+    console.log("got callback");
+    const userType = req.session.userType;
     res.redirect(`${FRONTEND}/`);
   }
 );
+app.get("/changeRole", isUserAuthenticated, (req, res) => {
+  UserModel.findUser(req.user, (error, user) => {
+    if (error) {
+      res.send({ error: error });
+    } else {
+      if (user.roleType === 0) {
+        user.roleType = 1;
+      } else {
+        user.roleType = 0;
+      }
 
+      user.save((err, savedUser) => {
+        if (err) {
+          res.send({ error: err });
+        } else {
+          savedUser.inflateData((error, inflatedUser) => {
+            if (error) {
+              res.send({ error: error });
+            } else {
+              res.redirect(`${FRONTEND}/`);
+              //res.send({ data: inflatedUser });
+            }
+          });
+        }
+      });
+    }
+  });
+});
+app.post("/approveRejectVendor", isUserAuthenticated, (req, res) => {
+  console.log("/approveRejectVendor");
+  console.log(req.body.data);
+
+  UserModel.findUser(req.user, (error, user) => {
+    if (error) {
+      res.send({ error: error });
+    } else {
+      //todo check if caller is admin
+      UserModel.findById(req.body.data.id, (error, user) => {
+        if (error) {
+          res.send({ error: error });
+        } else {
+          if (req.body.data.flag) {
+            user.vendorData.status = 1;
+          } else {
+            //todo email rejection
+            user.vendorData.status = 2;
+          }
+          user.save((err, savedUser) => {
+            if (err) {
+              res.send({ error: err });
+            } else {
+              savedUser.inflateData((error, inflatedUser) => {
+                if (error) {
+                  res.send({ error: error });
+                } else {
+                  res.send({ data: inflatedUser });
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+  });
+});
 app.post("/setRole", isUserAuthenticated, (req, res) => {
   console.log("/setRole");
   console.log(req.body.roleType);
@@ -121,6 +202,7 @@ app.post("/setRole", isUserAuthenticated, (req, res) => {
       } else {
         user.roleType = roleType;
         user.vendorData = vendorData;
+        user.vendorData.status = 0; //pending approval
         user.save((err, savedUser) => {
           if (err) {
             res.send({ error: err });
@@ -191,14 +273,27 @@ app.get("/convertToPoints", isUserAuthenticated, async (req, res) => {
       if (error) {
         res.send({ error: error });
       } else {
+        const REDEMPTION_RATIO = 10;
         let stepsData = user.steps[user.steps.length - 1];
-        stepsData.points = stepsData.steps;
+        stepsData.points = Math.round(stepsData.steps / REDEMPTION_RATIO);
         user.save((err, savedUser) => {
           res.send({ data: savedUser });
         });
       }
     });
   }
+});
+app.get("/pendingVendors", isUserAuthenticated, (req, res) => {
+  UserModel.find(
+    { roleType: 1, "vendorData.status": { $nin: [1, 2] } },
+    (error, results) => {
+      if (error) {
+        res.send({ error: error });
+      } else {
+        res.send({ data: results });
+      }
+    }
+  );
 });
 app.get("/getRewards", isUserAuthenticated, (req, res) => {
   console.log("/getRewards");
@@ -230,20 +325,26 @@ app.post("/createReward/:id*?", isUserAuthenticated, (req, res) => {
       } else {
         const { id } = req.params;
         if (!id) {
-          let rewardModel = new RewardModel({
-            cost: reward.cost,
-            expirationDate: reward.expirationDate,
-            title: reward.title,
-            description: reward.description,
-            image: null, // set seperately
-            creator: user,
-            creatorLogo: user.vendorData.image
-          });
-          rewardModel.save((error, model) => {
-            if (error) {
-              res.send({ error: error });
+          user.canCreate((err, flag) => {
+            if (!flag) {
+              res.send({ error: err });
             } else {
-              res.send({ data: model });
+              let rewardModel = new RewardModel({
+                cost: reward.cost,
+                expirationDate: reward.expirationDate,
+                title: reward.title,
+                description: reward.description,
+                image: null, // set seperately
+                creator: user,
+                creatorLogo: user.vendorData.image
+              });
+              rewardModel.save((error, model) => {
+                if (error) {
+                  res.send({ error: error });
+                } else {
+                  res.send({ data: model });
+                }
+              });
             }
           });
         } else {
