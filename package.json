@@ -18,9 +18,8 @@
     "passport-google-oauth20": "^2.0.0"
   },
   "scripts": {
-    "start": "node serverTwo.js",
-    "start_prod": "PORT=5500 FRONTEND=http://bfit.getdispatch.co PUBLIC_ADDRESS=http://bfit.getdispatch.co/api npm start",
-    "start_mongo": "~/mongodb/bin/mongod --dbpath=/Users/ollie/data/bfit_db",
-    "clear_mongo": "node ClearDatabaseScript.js"
+    "start": "node server.js",
+    "start_prod": "ADMIN_EMAIL=oleksiy@alwaysaugust.co PORT=5500 FRONTEND=http://bfit.getdispatch.co PUBLIC_ADDRESS=http://bfit.getdispatch.co/api npm start",
+    "start_mongo": "~/mongodb/bin/mongod --dbpath=/Users/ollie/data/bfit_db"
   }
 }

@@ -77,7 +77,6 @@ UserModelSchema.methods.canCreate = function canCreate(cb) {
 };
 UserModelSchema.methods.inflateData = function inflateData(cb) {
   //iflate redemption data
-  console.log("...inflating user data");
   if (this.roleType === 1) {
     RewardModel.find({ creator: this._id }, (error, rewardsCreated) => {
       if (error) {
@@ -94,9 +93,6 @@ UserModelSchema.methods.inflateData = function inflateData(cb) {
               usersRedeemed.forEach(user => {
                 user.redemptions.forEach(red => {
                   let rewardObject = rewardsCreated.find(el => {
-                    console.log(el._id);
-                    console.log(red.rewardId);
-                    console.log(el._id.equals(red.rewardId));
                     return el._id.equals(red.rewardId);
                   });
                   if (!rewardObject) {
@@ -165,8 +161,6 @@ UserModelSchema.methods.redeem = function redeem(rewardId, cb) {
     if (error) {
       cb(error);
     } else {
-      console.log(rewardId);
-      console.log(reward);
       let pointsRequired = reward.cost;
       let total = 0;
 
@@ -179,10 +173,7 @@ UserModelSchema.methods.redeem = function redeem(rewardId, cb) {
         total += stepData.points;
       });
       total -= totalRedemptionPoints;
-      console.log("total:" + total);
-      console.log("points:" + pointsRequired);
       if (total > pointsRequired) {
-        console.log("adding redemption");
         this.redemptions.push({
           rewardId: rewardId,
           timeStamp: moment().unix(),
@@ -226,7 +217,6 @@ UserModelSchema.methods.getSteps = function getSteps(cb) {
       jsonData.point.forEach(point => {
         totalSteps += point.value[0].intVal;
       });
-      //totalSteps = 1707;
       if (
         this.steps.length > 0 &&
         this.steps[this.steps.length - 1].day === start
@@ -235,9 +225,7 @@ UserModelSchema.methods.getSteps = function getSteps(cb) {
       } else {
         this.steps.push({ day: start, steps: totalSteps, points: 0 }); //todo find old points
       }
-      console.log("saving new steps");
       this.save(cb);
-      //cb(totalSteps);
     })
     .catch(error => cb(error, null));
 };
@@ -248,7 +236,6 @@ UserModelSchema.statics.findOrCreate = function findOrCreate(
   cb,
   roleType
 ) {
-  //console.log(profile);
   var userObj = new this({
     accessToken,
     refreshToken,
@@ -260,9 +247,7 @@ UserModelSchema.statics.findOrCreate = function findOrCreate(
     email: profile.emails[0].value,
     roleType: roleType
   });
-  console.log("findOrCreate");
   this.findOne({ googleId: profile.id }, function(err, result) {
-    //console.log("found:" + result);
     if (result) {
       // old
       result.accessToken = accessToken; //refresh accessToken
@@ -281,13 +266,10 @@ UserModelSchema.statics.findUser = function findOrCreate(profile, cb) {
   } else {
     searchId = profile["googleId"];
   }
-  console.log("findOne: " + searchId);
   this.findOne({ googleId: searchId }, function(err, result) {
     if (result) {
-      console.log("found");
       result.getSteps(cb);
     } else {
-      console.log("not found");
       cb("No user");
     }
   });
