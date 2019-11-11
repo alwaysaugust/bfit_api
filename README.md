@@ -59,3 +59,5 @@ server{
 }
 
 ```
+
+\*For Google Login on your domain remeber to add a new Client ID for Web applications at https://console.developers.google.com/apis/credentials for OAUTH2 client and then update `clientID` and `clientSecret` in the server code
