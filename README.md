@@ -37,7 +37,7 @@ server{
                 proxy_set_header Host $http_host;
                 proxy_set_header X-NginX-Proxy true;
 
-                rewrite ^/bfit/api/?(.*) /$1 break;
+                rewrite ^/api/?(.*) /$1 break;
 
                 proxy_pass http://123.456.789.321:5500;
                 proxy_redirect off;
